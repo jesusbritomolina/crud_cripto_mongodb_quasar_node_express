@@ -23,7 +23,7 @@
           <q-form :action="rutaform" :method="metodoform" class="q-gutter-md" enctype="multipart/form-data">
 
             <div>
-              <q-input filled type="text" v-model="cripto.nombre" label="Nombre*" name="nombre" required/>
+              <q-input filled type="text" v-model="cripto.nombre" label="Nombre*" name="nombre" maxlength="30" required/>
             </div>
           
             <div>

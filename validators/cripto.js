@@ -4,8 +4,7 @@ const validateResults = require("../utils/handleValidator")
 const validatorCreateCripto = [
     check("nombre","Ingrese nombre completo")
     .exists()
-    .notEmpty()
-    .isLength({ min:3 }),
+    .notEmpty(),
     check("precio","Campo precio vacio")
     .exists()
     .notEmpty()
