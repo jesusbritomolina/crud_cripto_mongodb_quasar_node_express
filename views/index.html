@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+<html>
+  <!--
+    WARNING! Make sure that you match all Quasar related
+    tags to the same version! (Below it's "@1.18.10")
+  -->
+
+  <head>
+    <link href="https://fonts.googleapis.com/css?family=Roboto:100,300,400,500,700,900|Material+Icons" rel="stylesheet" type="text/css">
+    <link href="https://cdn.jsdelivr.net/npm/quasar@1.18.10/dist/quasar.min.css" rel="stylesheet" type="text/css">
+  </head>
+  <!-- Política de seguridad de contenido que permite mostrar la imagen -->
+  <meta http-equiv="Content-Security-Policy" content="default-src * self blob: data: gap:; style-src * self 'unsafe-inline' blob: data: gap:; script-src * 'self' 'unsafe-eval' 'unsafe-inline' blob: data: gap:; object-src * 'self' blob: data: gap:; img-src * self 'unsafe-inline' blob: data: gap:; connect-src self * 'unsafe-inline' blob: data: gap:; frame-src * self blob: data: gap:;">
+  <body>
+    <!-- Add the following at the end of your body tag -->
+    
+    <div id="q-app">
+
+      <div class="container">
+        <div class="q-pa-md" style="max-width: 500px">
+          
+          <h5>Datos de la Criptomoneda</h5>
+          <q-form :action="rutaform" :method="metodoform" class="q-gutter-md" enctype="multipart/form-data">
+
+            <div>
+              <q-input filled type="text" v-model="cripto.nombre" label="Nombre*" name="nombre" required/>
+            </div>
+          
+            <div>
+              <q-input filled type="float" v-model="cripto.precio" label="Precio*" name="precio" 
+              oninput="if(this.value < 0) this.value = 0;" required/>
+            </div>
+            
+            <div>
+              <q-input filled type="text" v-model="cripto.simbolo" label="Simbolo*" name="simbolo" required/>
+            </div>
+
+            <div>
+              <div class="row" >
+                <div class="col-12 col-md-8">
+                  <q-file outlined v-model="cripto.imagen" label="Imagen*" name="imagen" required>
+                    <template v-slot:prepend>
+                      <q-icon name="attach_file" />
+                    </template>
+                  </q-file>
+                </div>
+              
+                <div class="col-12 col-md-4">
+                  <template v-if="edit === true">
+
+                    <img style="margin-left: 40px;" :src="cripto.url" width="50" height="50" >
+                  </template>
+                </div>
+              </div>
+            </div>
+
+            <template v-if="edit === false">
+              <q-btn
+                type="submit"
+                icon-right="cloud_upload"
+                label="Registrar Cripto"
+                class="q-mt-md"
+                color="primary"
+              >
+                <template v-slot:loading>
+                  <q-spinner-facebook />
+                </template>
+              </q-btn>
+            </template>
+            
+            <template v-else>
+              <q-btn
+                type="submit"
+                label="Actualizar Cripto"
+                class="q-mt-md"
+                color="orange-10"
+              >
+                <template v-slot:loading>
+                  <q-spinner-facebook />
+                </template>
+              </q-btn>
+
+              <q-btn
+              type="button"
+              label="Cancelar"
+              class="q-mt-md"
+              color="blue-grey-9"
+              text-color="white"
+              v-on:click="reset()"
+              >
+              </q-btn>
+            </template>
+           
+          </q-form>
+
+          <div>
+            <q-input style="margin-top: 15px;" rounded filled type="text" v-model="buscar" label="Buscar Cripto" name="buscar" v-on:input="signalChange"/>
+            
+            <template v-if="showspinner === true">
+            <q-spinner
+            color="primary"
+            size="3em"
+            :thickness="10"
+            />
+            </template>
+          </div>
+
+          <div  class="q-pa-md">
+            <table  class="q-table" id="tablacriptos">
+              <thead   class="thead-dark">
+                  <tr >
+                      <th>Nombre</th>
+                      <th>Precio</th>
+                      <th>Simbolo</th>
+                      <th>Imagen</th>
+                      <th>Acciones</th>
+                  </tr>
+              </thead>
+              <tbody >
+                  <tr v-for="cripto of criptos" class="tr-c" :key="cripto.data._id">
+                      <td style="display: none;">{{cripto.data._id}}</td>
+                      <td>{{cripto.data.nombre}}</td>
+                      <td>{{cripto.data.precio}}</td>
+                      <td>{{cripto.data.simbolo}}</td>
+                      <td><img :src="cripto.url" width="30" height="30"></td>
+                      <td>
+                        <q-btn v-on:click="updateCripto(cripto.data._id)" color="teal-9"  label="Editar" />
+                      </td>
+                      <td>
+                        <q-btn v-on:click="confirmar(cripto.data._id)"  color="red-10"  label="Eliminar" />
+                      </td>
+                  </tr>
+              </tbody>
+            </table>
+          </div>
+
+        </div>
+      </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/vue@^2.0.0/dist/vue.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/quasar@1.18.10/dist/quasar.umd.min.js"></script>
+    <script src="//cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    
+    <script>
+      // En el constructor se asignan los valores iniciales del nuevo objeto.
+      class Cripto {
+        constructor(nombre, precio, simbolo, imagen, url) {
+          this.nombre = nombre;
+          this.precio = precio;
+          this.simbolo = simbolo;
+          this.imagen = imagen;
+          this.url = url;
+        }
+      }
+
+      new Vue({
+        el: '#q-app',
+
+        data: function () {
+          return {
+            cripto: new Cripto(),
+            criptos: [],
+            edit: false,
+            criptoToEdit: '',
+            buscar: '',
+            // rutaform y metodoform registra/actualiza la cripto al pulsar el boton "Registrar Cripto" o "Actualizar Cripto"
+            rutaform: '/api/cripto/crear',
+            metodoform: 'POST',
+            showspinner: false
+          }
+        },
+        created() {
+          // Muestra las criptomonedas
+          this.getCriptos();
+        },
+        methods: {
+          reset(){
+            // Al resetear rellena denuevo las variables
+            this.cripto= new Cripto(),
+            this.criptos= [],
+            this.edit= false,
+            this.criptoToEdit= '',
+            this. buscar= '',
+            this.rutaform= '/api/cripto/crear',
+            this.metodoform= 'POST',
+            this.showspinner= false,
+            // Y muestra denuevo las criptomonedas
+            this.getCriptos();
+          },
+
+          getCriptos() {
+            // Muestra el spinner mientras carga la pagina
+            this.showspinner = true;
+            // fetch es una API para realizar solicitudes de servidor con promesas de manera asíncrona
+            fetch('/api/cripto')
+              // .then() = Cuando termina la solicitud
+              // res.json() = Convierte la respuesta de promesa a objeto 
+              .then(res => res.json())
+              .then(data => {
+                // Rellena el arreglo criptos: [] con todas las criptomonedas
+                this.criptos = data;
+                
+                //console.log("getCriptos",data)
+
+                // Oculta el spinner al finalizar la carga de la pagina
+                this.showspinner = false;
+              })
+          },
+
+          deleteCripto(id) {
+            fetch('api/cripto/borrar/' + id, {
+              method: 'DELETE',
+              headers: {
+                'Accept': 'application/json',
+                'Content-type': 'application/json'
+              }
+            })
+            .then(res => res.json())
+            .then(data => {
+              this.getCriptos();
+            })
+          },
+
+          updateCripto(id) {
+            // Muestra el spinner mientras carga la pagina al pulsar el boton "editar"
+            this.showspinner = true;
+
+            fetch('api/cripto/' + id)
+            .then(res => res.json())
+            .then(data => {
+              // Muestra los datos de la criptomoneda a editar en el formulario
+              this.cripto = new Cripto(data.nombre, data.precio, data.simbolo, data.imagen, data.url);
+              // Cambia los valores de las demas variables
+              this.criptoToEdit = data._id;
+              this.edit = true;
+              this.rutaform = '/api/cripto/editar/' + this.criptoToEdit
+              this.metodoform = "POST"
+
+              // Oculta el spinner al finalizar
+              this.showspinner = false;
+            })
+          },
+ 
+          signalChange(evt) {
+            const tableReg = document.getElementById("tablacriptos");
+            const searchText = evt.toLowerCase();
+
+            // Recorremos todas las filas con contenido de la tabla
+            for (let i = 1; i < tableReg.rows.length; i++) {
+                let found = false;
+                const cellsOfRow = tableReg.rows[i].getElementsByTagName('td');
+
+                // Recorremos todas las celdas
+                for (let j = 0; j < cellsOfRow.length && !found; j++) {
+                    const compareWith = cellsOfRow[j].textContent.toLowerCase();
+                    // Compara con if el texto del buscador con el nombre de la cripto
+                    if (searchText.length == 0 || compareWith.includes(searchText) == true) {
+                      found = true;
+                    }
+                }
+
+                if (found) {
+                    // si encuentra coincidencia, muestra la fila de la tabla
+                    tableReg.rows[i].style.display = '';
+                } else {
+                    // si no ha encontrado ninguna coincidencia, esconde la fila de la tabla
+                    tableReg.rows[i].style.display = 'none';
+                }
+            }
+          },
+          
+          confirmar(id) {
+            Swal.fire({
+              title: '¿Está seguro?',
+              text: "La criptomoneda una vez eliminada no se puede recuperar",
+              icon: 'warning',
+              showCancelButton: true,
+              confirmButtonColor: '#3085d6',
+              cancelButtonColor: '#d33',
+              confirmButtonText: '¡Sí, bórralo!'
+            }).then((result) => {
+              if (result.isConfirmed) {
+                this.deleteCripto(id);
+                Swal.fire(
+                  'Borrado!',
+                  'Su criptomoneda ha sido eliminada.',
+                  'success'
+                )
+                this.reset();
+              }
+            })           
+          }    
+        },
+        // ...etc
+      })
+    </script>
+  </body>
+</html>
